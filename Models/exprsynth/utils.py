@@ -98,24 +98,33 @@ def run_jobs_in_parallel(all_jobs: List[JobType],
     # This will hold the actual results:
     result_queue = multiprocessing.Queue(result_queue_size)
 
-    # Create workers:
-    num_workers = multiprocessing.cpu_count() - 1
-    workers = [multiprocessing.Process(target=__parallel_queue_worker,
-                                       args=(worker_id, job_queue, result_queue, worker_fn))
-               for worker_id in range(num_workers)]
-    for worker in workers:
-        worker.start()
 
-    num_workers_finished = 0
-    while True:
-        result = result_queue.get()
-        if result is None:
-            num_workers_finished += 1
-            if num_workers_finished == len(workers):
-                finished_callback()
-                break
-        else:
+    # 这里本来是并行的，但是除了一个can't pickle错误，改成循环。具体原因还不知道。
+    for job in all_jobs:
+        for result in worker_fn(0, job):
             received_result_callback(result)
 
-    for worker in workers:
-        worker.join()
+    finished_callback()
+
+    # 这里本来是并行的，但是除了一个can't pickle错误，改成循环。具体原因还不知道。
+    # # Create workers:
+    # num_workers = multiprocessing.cpu_count() - 1
+    # workers = [multiprocessing.Process(target=__parallel_queue_worker,
+    #                                    args=(worker_id, job_queue, result_queue, worker_fn))
+    #            for worker_id in range(num_workers)]
+    # for worker in workers:
+    #     worker.start()
+
+    # num_workers_finished = 0
+    # while True:
+    #     result = result_queue.get()
+    #     if result is None:
+    #         num_workers_finished += 1
+    #         if num_workers_finished == len(workers):
+    #             finished_callback()
+    #             break
+    #     else:
+    #         received_result_callback(result)
+    #
+    # for worker in workers:
+    #     worker.join()
